@@ -2,6 +2,6 @@ Para realizar a compilação do binario basta fazer a clonagem do repositório e
 
 Linux/Windows
 ```
-go build main.go -o nome
+go build main.go
 ```
 
