@@ -1,2 +1,7 @@
-# validar_ssl
-Binário para validação de certificados digitais, absorvendo uma lista de urls
+Para realizar a compilação do binario basta fazer a clonagem do repositório e realizar o seguinte comando:
+
+Linux/Windows
+```
+go build main.go -o nome
+```
+
