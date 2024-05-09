@@ -21,3 +21,4 @@ Instalação:
 ```
 git clone https://github.com/axlfranklin/validar_ssl.git
 ```
+<h2>Sugestões de ideias serão bem vindas.</h2>
