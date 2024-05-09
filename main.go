@@ -4,68 +4,109 @@ import (
 	"bufio"
 	"crypto/tls"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
-func validarCertificado(url string) string {
-	if !strings.HasPrefix(url, "https://") {
+// verifyCertificate verifica o certificado SSL para o URL fornecido.
+func verifyCertificate(url string) (bool, string) {
+	if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
 		url = "https://" + url
 	}
 
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
+	// Dividindo o URL para extrair o nome do host
+	hostName := strings.TrimPrefix(strings.TrimPrefix(url, "http://"), "https://")
+	hostName = strings.Split(hostName, "/")[0] // Remover qualquer caminho
 
-	client := &http.Client{
-		Transport: tr,
-		Timeout:   5 * time.Second,
-	}
-
-	response, err := client.Get(url)
+	conn, err := tls.DialWithDialer(&net.Dialer{Timeout: 10 * time.Second}, "tcp", hostName+":443", nil)
 	if err != nil {
-		return fmt.Sprintf("Erro ao tentar validar o certificado: %v", err)
+		return false, fmt.Sprintf("%s: Erro ao conectar ou ler o certificado\n", url)
 	}
-	defer response.Body.Close()
+	defer conn.Close()
 
-	if len(response.TLS.PeerCertificates) == 0 {
-		return "Certificado inválido ou não encontrado."
+	cert := conn.ConnectionState().PeerCertificates[0]
+
+	// Formatar datas
+	validFrom := cert.NotBefore.Format("2006-01-02")
+	validUntil := cert.NotAfter.Format("2006-01-02")
+
+	result := fmt.Sprintf("%s\nAssunto: %s\nEmissor: %s\nVálido De: %s\nVálido Até: %s\n",
+		url, cert.Subject.CommonName, cert.Issuer.CommonName, validFrom, validUntil)
+	return true, result
+}
+
+func checkRedirection(url string) bool {
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
 	}
+	resp, err := client.Get(url)
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+	return resp.StatusCode >= 300 && resp.StatusCode < 400
+}
 
-	cert := response.TLS.PeerCertificates[0]
-
-	if cert != nil {
-		return fmt.Sprintf("Certificado válido para: %s", cert.Subject.CommonName)
+func processUrl(url string, validFile, invalidFile *os.File, wg *sync.WaitGroup, mutex *sync.Mutex) {
+	defer wg.Done()
+	valid, result := verifyCertificate(url)
+	mutex.Lock()
+	if valid {
+		validFile.WriteString(result)
 	} else {
-		return "Certificado inválido ou não encontrado."
+		if strings.HasPrefix(url, "https://") {
+			if checkRedirection(url) {
+				mutex.Unlock()
+				validFile.WriteString(url + " (Redirecionado)\n")
+				return
+			}
+		}
+		invalidFile.WriteString(result)
 	}
+	mutex.Unlock()
 }
 
 func main() {
-	if len(os.Args) != 2 {
-		fmt.Println("Uso: go run main.go <arquivo_de_urls>")
-		os.Exit(1)
-	}
+	fmt.Println("Analisando URLs...")
 
-	filePath := os.Args[1]
-	file, err := os.Open(filePath)
+	urlsFile, err := os.Open("urls.txt")
 	if err != nil {
-		fmt.Printf("Erro ao abrir o arquivo: %v\n", err)
-		os.Exit(1)
+		fmt.Println("Erro ao abrir arquivo de URL:", err)
+		return
 	}
-	defer file.Close()
+	defer urlsFile.Close()
 
-	scanner := bufio.NewScanner(file)
+	validFile, err := os.Create("validadas.txt")
+	if err != nil {
+		fmt.Println("Erro ao criar arquivo válido:", err)
+		return
+	}
+	defer validFile.Close()
+
+	invalidFile, err := os.Create("invalidadas.txt")
+	if err != nil {
+		fmt.Println("Erro ao criar arquivo inválido:", err)
+		return
+	}
+	defer invalidFile.Close()
+
+	scanner := bufio.NewScanner(urlsFile)
+	var wg sync.WaitGroup
+	var mutex sync.Mutex
+
 	for scanner.Scan() {
-		url := scanner.Text()
-		resultado := validarCertificado(url)
-		fmt.Printf("%s: %s\n", url, resultado)
+		wg.Add(1)
+		go processUrl(scanner.Text(), validFile, invalidFile, &wg, &mutex)
 	}
 
-	if err := scanner.Err(); err != nil {
-		fmt.Printf("Erro ao ler o arquivo: %v\n", err)
-		os.Exit(1)
-	}
+	wg.Wait()
+
+	fmt.Println("Concluído!")
 }
