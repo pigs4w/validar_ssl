@@ -5,3 +5,8 @@ Linux/Windows
 go build main.go
 ```
 
+Para realizar a execução do arquivo sem compilar, Exemplo:
+
+```
+go run main.go <urls.txt>
+```
