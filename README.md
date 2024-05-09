@@ -13,7 +13,7 @@ go run main.go
 Automatizando o Nmap para URLs...
 Digite o nome do arquivo de entrada: exemplo.txt
 ```
-TODO: Apos execução o mesmo irá gerar dois arquivos de output para uma melhor visualização: 
+TODO: {IMPLEMENTAR}Apos execução o mesmo irá gerar dois arquivos de output para uma melhor visualização: 
 
 ```
 validadas.txt e invalidadas.txt - em desenvolvimento
