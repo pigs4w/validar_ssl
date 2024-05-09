@@ -9,9 +9,8 @@ go build main.go
 Para realizar a execução do arquivo sem compilar, Exemplo:
 
 ```
-go run main.go
+go run main.go <arquivo.txt>
 Automatizando o Nmap para URLs...
-Digite o nome do arquivo de entrada: exemplo.txt
 ```
 TODO: {IMPLEMENTAR}Apos execução o mesmo irá gerar dois arquivos de output para uma melhor visualização: 
 
