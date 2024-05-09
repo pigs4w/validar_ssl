@@ -17,3 +17,7 @@ TODO: {IMPLEMENTAR}Apos execução o mesmo irá gerar dois arquivos de output pa
 ```
 validadas.txt e invalidadas.txt - em desenvolvimento
 ```
+Instalação:
+```
+git clone https://github.com/axlfranklin/validar_ssl.git
+```
