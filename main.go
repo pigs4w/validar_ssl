@@ -25,9 +25,12 @@ func scanURL(url string, wg *sync.WaitGroup, ch chan struct{}) {
 func main() {
 	fmt.Println("Automatizando o Nmap para URLs...")
 
-	fmt.Print("Digite o nome do arquivo de entrada: ")
-	var filename string
-	fmt.Scanln(&filename)
+	if len(os.Args) != 2 {
+		fmt.Println("Uso: go run main.go <arquivo_de_urls>")
+		return
+	}
+
+	filename := os.Args[1]
 
 	file, err := os.Open(filename)
 	if err != nil {
